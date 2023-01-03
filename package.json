@@ -1,5 +1,5 @@
 {
-    "name": "n-strument",
+    "name": "@nivinjoseph/n-strument",
     "version": "1.0.0",
     "description": "Instrumentation helper library",
     "main": "./dist/index.js",
