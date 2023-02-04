@@ -47,11 +47,14 @@ const tracerConfig = {
 };
 if (enableXrayTracing)
     tracerConfig.idGenerator = new id_generator_aws_xray_1.AWSXRayIdGenerator();
+let traceHost = n_config_1.ConfigurationManager.getConfig("otelTraceHost");
+if (traceHost == null || typeof traceHost !== "string" || traceHost.isEmptyOrWhiteSpace())
+    traceHost = isDev ? "localhost" : "0.0.0.0";
 const provider = new sdk_trace_node_1.NodeTracerProvider();
 // const exporter = new ConsoleSpanExporter();
 const exporter = new exporter_trace_otlp_http_1.OTLPTraceExporter({
     // optional - default url is http://localhost:4318/v1/traces
-    url: `http://${isDev ? "localhost" : "0.0.0.0"}:4318/v1/traces`,
+    url: `http://${traceHost}:4318/v1/traces`,
     // optional - collection of custom headers to be sent with each request, empty by default
     headers: {}
 });
