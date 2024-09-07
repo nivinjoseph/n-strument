@@ -3,7 +3,7 @@
     "version": "1.0.4",
     "description": "Instrumentation helper library",
     "type": "module",
-    "main": "./dist/index.js",
+    "exports": "./dist/index.js",
     "types": "./dist/index.d.ts",
     "packageManager": "yarn@4.4.1",
     "scripts": {
