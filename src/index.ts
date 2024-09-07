@@ -32,7 +32,7 @@ registerInstrumentations({
     ]
 });
 
-const env = ConfigurationManager.getConfig<string>("env");
+const env = ConfigurationManager.requireStringConfig("env");
 const isDev = env === "dev";
 
 const resource =
