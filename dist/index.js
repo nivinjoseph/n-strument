@@ -1,64 +1,65 @@
-"use strict";
-var _a, _b;
-Object.defineProperty(exports, "__esModule", { value: true });
-const auto_instrumentations_node_1 = require("@opentelemetry/auto-instrumentations-node");
-const resources_1 = require("@opentelemetry/resources");
-const semantic_conventions_1 = require("@opentelemetry/semantic-conventions");
-const sdk_trace_node_1 = require("@opentelemetry/sdk-trace-node");
-const instrumentation_1 = require("@opentelemetry/instrumentation");
-const sdk_trace_base_1 = require("@opentelemetry/sdk-trace-base");
-const api_1 = require("@opentelemetry/api");
-const exporter_trace_otlp_http_1 = require("@opentelemetry/exporter-trace-otlp-http");
-const n_config_1 = require("@nivinjoseph/n-config");
-const instrumentation_koa_1 = require("@opentelemetry/instrumentation-koa");
-const n_util_1 = require("@nivinjoseph/n-util");
-const propagator_aws_xray_1 = require("@opentelemetry/propagator-aws-xray");
-const id_generator_aws_xray_1 = require("@opentelemetry/id-generator-aws-xray");
+import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
+import { Resource } from "@opentelemetry/resources";
+import { 
+// SemanticResourceAttributes,
+ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION } from "@opentelemetry/semantic-conventions";
+import { NodeTracerProvider, ParentBasedSampler, TraceIdRatioBasedSampler } from "@opentelemetry/sdk-trace-node";
+import { registerInstrumentations } from "@opentelemetry/instrumentation";
+import { BatchSpanProcessor } from "@opentelemetry/sdk-trace-base";
+import { diag, DiagConsoleLogger, DiagLogLevel } from "@opentelemetry/api";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
+import { ConfigurationManager } from "@nivinjoseph/n-config";
+import { KoaLayerType } from "@opentelemetry/instrumentation-koa";
+import { TypeHelper } from "@nivinjoseph/n-util";
+import { AWSXRayPropagator } from "@opentelemetry/propagator-aws-xray";
+import { AWSXRayIdGenerator } from "@opentelemetry/id-generator-aws-xray";
 // For troubleshooting, set the log level to DiagLogLevel.DEBUG
-api_1.diag.setLogger(new api_1.DiagConsoleLogger(), api_1.DiagLogLevel.INFO);
+diag.setLogger(new DiagConsoleLogger(), DiagLogLevel.INFO);
 // This registers all instrumentation packages
-(0, instrumentation_1.registerInstrumentations)({
+registerInstrumentations({
     instrumentations: [
-        (0, auto_instrumentations_node_1.getNodeAutoInstrumentations)({
+        getNodeAutoInstrumentations({
             "@opentelemetry/instrumentation-http": undefined,
             "@opentelemetry/instrumentation-grpc": undefined,
             "@opentelemetry/instrumentation-redis": undefined,
             "@opentelemetry/instrumentation-ioredis": undefined,
             "@opentelemetry/instrumentation-pg": undefined,
             "@opentelemetry/instrumentation-knex": undefined,
-            "@opentelemetry/instrumentation-koa": { ignoreLayersType: [instrumentation_koa_1.KoaLayerType.MIDDLEWARE] },
+            "@opentelemetry/instrumentation-koa": { ignoreLayersType: [KoaLayerType.MIDDLEWARE] },
             "@opentelemetry/instrumentation-aws-sdk": undefined,
             "@opentelemetry/instrumentation-aws-lambda": undefined
         })
     ]
 });
-const env = n_config_1.ConfigurationManager.getConfig("env");
+const env = ConfigurationManager.requireStringConfig("env");
 const isDev = env === "dev";
-const resource = resources_1.Resource.default().merge(new resources_1.Resource({
-    [semantic_conventions_1.SemanticResourceAttributes.SERVICE_NAME]: n_config_1.ConfigurationManager.getConfig("package.name"),
-    [semantic_conventions_1.SemanticResourceAttributes.SERVICE_VERSION]: n_config_1.ConfigurationManager.getConfig("package.version"),
-    [semantic_conventions_1.SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: env
+const resource = Resource.default().merge(new Resource({
+    // [SemanticResourceAttributes.SERVICE_NAME]: ConfigurationManager.getConfig("package.name"),
+    // [SemanticResourceAttributes.SERVICE_VERSION]: ConfigurationManager.getConfig("package.version"),
+    // [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: env
+    [ATTR_SERVICE_NAME]: ConfigurationManager.getConfig("package_name") ?? ConfigurationManager.getConfig("package.name"),
+    [ATTR_SERVICE_VERSION]: ConfigurationManager.getConfig("package.version")
 }));
-const samplingRate = (_a = n_util_1.TypeHelper.parseNumber(n_config_1.ConfigurationManager.getConfig("otelTraceSamplingRate"))) !== null && _a !== void 0 ? _a : 1;
-const enableXrayTracing = (_b = n_util_1.TypeHelper.parseBoolean(n_config_1.ConfigurationManager.getConfig("enableXrayTracing"))) !== null && _b !== void 0 ? _b : false;
+const samplingRate = TypeHelper.parseNumber(ConfigurationManager.getConfig("otelTraceSamplingRate")) ?? 1;
+const enableXrayTracing = TypeHelper.parseBoolean(ConfigurationManager.getConfig("enableXrayTracing")) ?? false;
 const tracerConfig = {
     resource: resource,
-    sampler: new sdk_trace_node_1.ParentBasedSampler({ root: new sdk_trace_node_1.TraceIdRatioBasedSampler(samplingRate) })
+    sampler: new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(samplingRate) })
 };
 if (enableXrayTracing)
-    tracerConfig.idGenerator = new id_generator_aws_xray_1.AWSXRayIdGenerator();
-let traceHost = n_config_1.ConfigurationManager.getConfig("otelTraceHost");
+    tracerConfig.idGenerator = new AWSXRayIdGenerator();
+let traceHost = ConfigurationManager.getConfig("otelTraceHost");
 if (traceHost == null || typeof traceHost !== "string" || traceHost.isEmptyOrWhiteSpace())
     traceHost = isDev ? "localhost" : "0.0.0.0";
-const provider = new sdk_trace_node_1.NodeTracerProvider();
+const provider = new NodeTracerProvider();
 // const exporter = new ConsoleSpanExporter();
-const exporter = new exporter_trace_otlp_http_1.OTLPTraceExporter({
+const exporter = new OTLPTraceExporter({
     // optional - default url is http://localhost:4318/v1/traces
     url: `http://${traceHost}:4318/v1/traces`,
     // optional - collection of custom headers to be sent with each request, empty by default
     headers: {}
 });
-const processor = new sdk_trace_base_1.BatchSpanProcessor(exporter);
+const processor = new BatchSpanProcessor(exporter);
 provider.addSpanProcessor(processor);
-provider.register(enableXrayTracing ? { propagator: new propagator_aws_xray_1.AWSXRayPropagator() } : undefined);
+provider.register(enableXrayTracing ? { propagator: new AWSXRayPropagator() } : undefined);
 //# sourceMappingURL=index.js.map
