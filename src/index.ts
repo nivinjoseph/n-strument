@@ -4,7 +4,7 @@ import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions"
 import { NodeTracerProvider, ParentBasedSampler, TraceIdRatioBasedSampler } from "@opentelemetry/sdk-trace-node";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { BatchSpanProcessor, TracerConfig } from "@opentelemetry/sdk-trace-base";
-import { diag, DiagConsoleLogger, DiagLogLevel } from '@opentelemetry/api';
+import { diag, DiagConsoleLogger, DiagLogLevel } from "@opentelemetry/api";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-http";
 import { ConfigurationManager } from "@nivinjoseph/n-config";
 import { KoaLayerType } from "@opentelemetry/instrumentation-koa";
@@ -47,7 +47,7 @@ const resource =
 const samplingRate = TypeHelper.parseNumber(ConfigurationManager.getConfig("otelTraceSamplingRate")) ?? 1;
 
 const enableXrayTracing = TypeHelper.parseBoolean(ConfigurationManager.getConfig("enableXrayTracing")) ?? false;
-  
+
 const tracerConfig: TracerConfig = {
     resource: resource,
     sampler: new ParentBasedSampler({ root: new TraceIdRatioBasedSampler(samplingRate) })
@@ -59,7 +59,7 @@ if (enableXrayTracing)
 let traceHost = ConfigurationManager.getConfig<string | null>("otelTraceHost");
 if (traceHost == null || typeof traceHost !== "string" || traceHost.isEmptyOrWhiteSpace())
     traceHost = isDev ? "localhost" : "0.0.0.0";
-    
+
 const provider = new NodeTracerProvider();
 // const exporter = new ConsoleSpanExporter();
 const exporter = new OTLPTraceExporter({
