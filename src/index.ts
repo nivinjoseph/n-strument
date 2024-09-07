@@ -1,6 +1,10 @@
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
 import { Resource } from "@opentelemetry/resources";
-import { SemanticResourceAttributes } from "@opentelemetry/semantic-conventions";
+import
+    {
+        // SemanticResourceAttributes,
+        ATTR_SERVICE_NAME, ATTR_SERVICE_VERSION
+    } from "@opentelemetry/semantic-conventions";
 import { NodeTracerProvider, ParentBasedSampler, TraceIdRatioBasedSampler } from "@opentelemetry/sdk-trace-node";
 import { registerInstrumentations } from "@opentelemetry/instrumentation";
 import { BatchSpanProcessor, TracerConfig } from "@opentelemetry/sdk-trace-base";
@@ -38,9 +42,12 @@ const isDev = env === "dev";
 const resource =
     Resource.default().merge(
         new Resource({
-            [SemanticResourceAttributes.SERVICE_NAME]: ConfigurationManager.getConfig("package.name"),
-            [SemanticResourceAttributes.SERVICE_VERSION]: ConfigurationManager.getConfig("package.version"),
-            [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: env
+            // [SemanticResourceAttributes.SERVICE_NAME]: ConfigurationManager.getConfig("package.name"),
+            // [SemanticResourceAttributes.SERVICE_VERSION]: ConfigurationManager.getConfig("package.version"),
+            // [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: env
+
+            [ATTR_SERVICE_NAME]: ConfigurationManager.getConfig("package_name") ?? ConfigurationManager.getConfig("package.name"),
+            [ATTR_SERVICE_VERSION]: ConfigurationManager.getConfig("package.version")
         })
     );
 
