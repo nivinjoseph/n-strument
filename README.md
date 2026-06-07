@@ -76,16 +76,23 @@ docker run -p 4318:4318 otel/opentelemetry-collector
 
 ## What gets instrumented
 
-The following auto-instrumentations are enabled (this set is fixed and not configurable without editing the library):
+The following auto-instrumentations are enabled. This set is fixed and not configurable without editing the library — but the full list of instrumentations is declared explicitly in `src/index.ts`, so flipping one on or off is a one-line `enabled` change:
 
 - HTTP
 - gRPC
-- Redis / ioredis
 - PostgreSQL (`pg`)
 - Knex
+- Redis / ioredis
 - Koa (middleware-layer spans are suppressed)
+- AMQP / RabbitMQ (`amqplib`)
+- Kafka (`kafkajs`)
+- Socket.IO
 - AWS SDK
 - AWS Lambda
+
+Every other instrumentation that `@opentelemetry/auto-instrumentations-node` ships (Express, Hapi, NestJS, MongoDB, MySQL, GraphQL, DNS, `fs`, the logging integrations, etc.) is explicitly disabled.
+
+To change the set, edit the `instrumentationConfig` map in [`src/index.ts`](src/index.ts) — it lists every instrumentation the library knows about with an explicit `enabled` flag, so toggling one is a single `true`/`false` edit. The map is typed `Required<InstrumentationConfigMap>`, which means a future `@opentelemetry/auto-instrumentations-node` upgrade that adds a new instrumentation will fail the build until you add the key and make a deliberate enabled/disabled decision (rather than letting it silently default to on).
 
 ## License
 
