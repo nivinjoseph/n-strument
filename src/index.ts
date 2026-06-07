@@ -1,5 +1,5 @@
 import { getNodeAutoInstrumentations } from "@opentelemetry/auto-instrumentations-node";
-import { Resource } from "@opentelemetry/resources";
+import { defaultResource, resourceFromAttributes } from "@opentelemetry/resources";
 import
     {
         // SemanticResourceAttributes,
@@ -40,14 +40,14 @@ const env = ConfigurationManager.requireStringConfig("env");
 const isDev = env === "dev";
 
 const resource =
-    Resource.default().merge(
-        new Resource({
+    defaultResource().merge(
+        resourceFromAttributes({
             // [SemanticResourceAttributes.SERVICE_NAME]: ConfigurationManager.getConfig("package.name"),
             // [SemanticResourceAttributes.SERVICE_VERSION]: ConfigurationManager.getConfig("package.version"),
             // [SemanticResourceAttributes.DEPLOYMENT_ENVIRONMENT]: env
 
-            [ATTR_SERVICE_NAME]: ConfigurationManager.getConfig("package_name") ?? ConfigurationManager.getConfig("package.name"),
-            [ATTR_SERVICE_VERSION]: ConfigurationManager.getConfig("package.version")
+            [ATTR_SERVICE_NAME]: ConfigurationManager.getConfig("package_name") ?? ConfigurationManager.getConfig("package.name") ?? undefined,
+            [ATTR_SERVICE_VERSION]: ConfigurationManager.getConfig("package.version") ?? undefined
         })
     );
 
@@ -67,7 +67,6 @@ let traceHost = ConfigurationManager.getConfig<string | null>("otelTraceHost");
 if (traceHost == null || typeof traceHost !== "string" || traceHost.isEmptyOrWhiteSpace())
     traceHost = isDev ? "localhost" : "0.0.0.0";
 
-const provider = new NodeTracerProvider();
 // const exporter = new ConsoleSpanExporter();
 const exporter = new OTLPTraceExporter({
     // optional - default url is http://localhost:4318/v1/traces
@@ -77,6 +76,11 @@ const exporter = new OTLPTraceExporter({
     headers: {}
 });
 const processor = new BatchSpanProcessor(exporter);
-provider.addSpanProcessor(processor);
+
+// Span processors are now supplied via the constructor (addSpanProcessor was removed in the OTel SDK 2.x line).
+const provider = new NodeTracerProvider({
+    ...tracerConfig,
+    spanProcessors: [processor]
+});
 
 provider.register(enableXrayTracing ? { propagator: new AWSXRayPropagator() } : undefined);
