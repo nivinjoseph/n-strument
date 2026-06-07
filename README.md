@@ -14,7 +14,7 @@ yarn add @nivinjoseph/n-strument
 
 ## Usage
 
-This is a **side-effect-only module** — it has no exports. Import it once, as the **very first import** in your application's entry point, before any module you want traced is loaded:
+This is primarily a **side-effect-on-import module**: importing it sets up auto-instrumentation and the OTLP exporter. It also exports a single `shutdownTracing` function for draining spans on shutdown (see below). Import it once, as the **very first import** in your application's entry point, before any module you want traced is loaded:
 
 ```ts
 // main.ts — the FIRST import, before koa/pg/redis/aws-sdk/etc.
@@ -41,6 +41,25 @@ const span = tracer.startSpan("do-work");
 // ...
 span.end();
 ```
+
+### Graceful shutdown
+
+Spans are buffered in memory by a `BatchSpanProcessor` and flushed periodically. On process exit that buffer is **not** drained automatically, so the spans around a deploy, scale-down, or shutdown — often the ones you most want — can be lost. n-strument does **not** register its own `SIGTERM`/`SIGINT` handlers (that would race with, and prematurely exit out of, your service's shutdown). Instead it exports `shutdownTracing`, which you call as the **last** step of your own graceful-shutdown sequence — after you've stopped accepting work and finished in-flight requests, so their spans are captured:
+
+```ts
+import { shutdownTracing } from "@nivinjoseph/n-strument";
+
+async function onShutdown(): Promise<void>
+{
+    await server.stop();      // stop accepting traffic, drain in-flight requests
+    await db.dispose();       // your other cleanup
+    await shutdownTracing();  // flush + shut down the exporter, last
+}
+```
+
+`shutdownTracing()` flushes the buffer and shuts the exporter down. It is idempotent — repeat calls return the same shutdown — so it's safe to wire into multiple paths.
+
+This works with the `node --import` style too: ES modules are singletons, so importing `shutdownTracing` from your code returns the same instance that `--import` already loaded, operating on the same tracer provider.
 
 ## Configuration
 
