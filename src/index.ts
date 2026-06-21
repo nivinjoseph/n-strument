@@ -50,7 +50,7 @@ const instrumentationConfig: Required<InstrumentationConfigMap> = {
     "@opentelemetry/instrumentation-grpc": { enabled: true },
     "@opentelemetry/instrumentation-hapi": { enabled: false },
     "@opentelemetry/instrumentation-http": { enabled: true },
-    "@opentelemetry/instrumentation-ioredis": { enabled: true },
+    "@opentelemetry/instrumentation-ioredis": { enabled: false }, // we don't want low-level ioredis command spans; the EDA flow is already traced via n-eda's event.* publish/process messaging spans
     "@opentelemetry/instrumentation-kafkajs": { enabled: true },
     "@opentelemetry/instrumentation-knex": { enabled: true },
     "@opentelemetry/instrumentation-koa": { enabled: true, ignoreLayersType: [KoaLayerType.MIDDLEWARE] },
